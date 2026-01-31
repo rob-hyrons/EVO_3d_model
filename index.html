@@ -1,3 +1,5 @@
+--- START OF FILE index.html ---
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,7 +21,6 @@
             box-shadow: -5px 0 15px rgba(0,0,0,0.05); 
         }
         
-        /* Loading Indicator */
         #loading-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
@@ -42,6 +43,24 @@
         .item-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
         .item-controls { display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; padding: 5px 10px; border-radius: 5px; }
         
+        /* Length Input Styling */
+        .length-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        .length-input {
+            width: 80px;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: right;
+        }
+
         .btn-add { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
         .qty-btn { width: 30px; height: 30px; border: 1px solid #ccc; background: white; cursor: pointer; border-radius: 4px; font-weight: bold; }
         .qty-btn:hover { background: #007bff; color: white; border-color: #007bff; }
@@ -186,109 +205,4 @@
         document.getElementById('add-to-basket-btn').addEventListener('click', () => {
             if (!highlightedPart) return;
             addToBasket(getBestName(highlightedPart));
-        });
-
-        function addToBasket(name) {
-            emptyMsg.style.display = 'none';
-            orderBtn.disabled = false;
-            let existing = document.querySelector(`[data-id="${name}"]`);
-            if (existing) { changeQty(name, 1); return; }
-
-            const li = document.createElement('li');
-            li.className = 'basket-item';
-            li.setAttribute('data-id', name);
-            li.innerHTML = `
-                <div class="item-header"><span>${name}</span><button class="remove-btn">&times;</button></div>
-                <div class="item-controls"><button class="qty-btn minus">-</button><span class="qty-num">1</span><button class="qty-btn plus">+</button></div>
-            `;
-            li.querySelector('.plus').onclick = () => changeQty(name, 1);
-            li.querySelector('.minus').onclick = () => changeQty(name, -1);
-            li.querySelector('.remove-btn').onclick = () => { li.remove(); checkEmpty(); };
-            basketList.appendChild(li);
-        }
-
-        function changeQty(name, delta) {
-            const item = document.querySelector(`[data-id="${name}"]`);
-            const qtyLabel = item.querySelector('.qty-num');
-            let val = parseInt(qtyLabel.innerText) + delta;
-            if (val <= 0) item.remove(); else qtyLabel.innerText = val;
-            checkEmpty();
-        }
-
-        function checkEmpty() {
-            if (basketList.children.length === 0) { emptyMsg.style.display = 'block'; orderBtn.disabled = true; }
-        }
-
-        // --- PDF GENERATION WITH HIGHLIGHTING ---
-        orderBtn.addEventListener('click', () => {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // 1. Get List of items in basket
-            const basketItemNames = Array.from(document.querySelectorAll('.basket-item')).map(el => el.getAttribute('data-id'));
-
-            // 2. TEMPORARY HIGHLIGHT: Turn everything in basket Green
-            const orderHighlightMaterial = new THREE.MeshStandardMaterial({ color: 0x28a745, emissive: 0x113311 });
-            
-            currentModel.traverse(n => {
-                if (n.isMesh) {
-                    const partName = getBestName(n);
-                    if (basketItemNames.includes(partName)) {
-                        n.material = orderHighlightMaterial;
-                    }
-                }
-            });
-
-            // 3. Render and Capture
-            renderer.render(scene, camera);
-            const imgData = renderer.domElement.toDataURL('image/png');
-
-            // 4. RESET MATERIALS back to normal
-            currentModel.traverse(n => {
-                if (n.isMesh) {
-                    n.material = originalMaterials.get(n.uuid);
-                }
-            });
-            // If something was selected (blue), keep it selected on screen
-            if (highlightedPart) highlightedPart.material = new THREE.MeshStandardMaterial({ color: 0x007bff, emissive: 0x001133 });
-            renderer.render(scene, camera);
-
-            // 5. Construct PDF
-            doc.setFontSize(20);
-            doc.text("Order Summary: New Trad EVO", 20, 20);
-            doc.setFontSize(10);
-            doc.text("Green highlighted parts are included in this order.", 20, 28);
-            
-            doc.addImage(imgData, 'PNG', 20, 35, 170, 100); 
-            
-            const tableRows = [];
-            document.querySelectorAll('.basket-item').forEach(item => {
-                tableRows.push([item.getAttribute('data-id'), item.querySelector('.qty-num').innerText]);
-            });
-
-            doc.autoTable({
-                startY: 145,
-                head: [['Part Name', 'Quantity']],
-                body: tableRows,
-                theme: 'striped',
-                headStyles: { fillColor: [40, 167, 69] } // Match the green highlight
-            });
-
-            doc.save('New_Trad_EVO_Order.pdf');
-        });
-
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = (window.innerWidth - 350) / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth - 350, window.innerHeight);
-        });
-    </script>
-</body>
-</html>
+        })
