@@ -5,69 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Part Selector - New Trad EVO</title>
     
-    <!-- PDF Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         body { margin: 0; font-family: 'Segoe UI', sans-serif; overflow: hidden; display: flex; height: 100vh; background: #f4f4f4; }
-        
         #viewport { flex: 1; position: relative; cursor: crosshair; }
-        #sidebar { 
-            width: 380px; background: white; border-left: 1px solid #ddd; 
-            display: flex; flex-direction: column; padding: 20px; 
-            box-shadow: -5px 0 15px rgba(0,0,0,0.05); 
-        }
+        #sidebar { width: 380px; background: white; border-left: 1px solid #ddd; display: flex; flex-direction: column; padding: 20px; box-shadow: -5px 0 15px rgba(0,0,0,0.05); }
         
         #loading-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
+            background: white; display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 100;
         }
 
-        /* Selection Popup */
         #popup-ui { 
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             display: none; text-align: center; min-width: 280px; z-index: 10;
         }
 
-        #length-input-box {
-            margin: 10px 0; padding: 10px; background: #fff9e6; border-radius: 6px; border: 1px solid #ffeeba;
-            display: none; /* Shown only for _L parts */
-        }
+        #length-input-box { margin: 10px 0; padding: 10px; background: #fff9e6; border-radius: 6px; border: 1px solid #ffeeba; display: none; }
         #length-input-box input { width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
 
         h2 { margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid #007bff; }
         #basket-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; }
         
-        /* Basket Item Styling */
-        .basket-item { 
-            background: #fff; border: 1px solid #eee; border-radius: 8px;
-            padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;
-        }
-        .item-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 1.1rem; }
-        .item-details { font-size: 0.9rem; color: #555; display: flex; gap: 15px; align-items: center; }
-        .item-controls { display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; padding: 5px 10px; border-radius: 5px; margin-top: 5px; }
+        .basket-item { background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .item-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .item-controls { display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; padding: 5px 10px; border-radius: 5px; }
         
         .btn-add { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
         .qty-btn { width: 30px; height: 30px; border: 1px solid #ccc; background: white; cursor: pointer; border-radius: 4px; font-weight: bold; }
-        .qty-btn:hover { background: #007bff; color: white; border-color: #007bff; }
         .remove-btn { color: #dc3545; border: none; background: none; cursor: pointer; font-size: 1.2rem; }
 
-        #basket-footer { padding-top: 20px; border-top: 1px solid #eee; }
-        .btn-order { background: #007bff; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1rem; }
+        .btn-order { background: #007bff; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
         .btn-order:disabled { background: #ccc; cursor: not-allowed; }
-
         #empty-msg { color: #888; text-align: center; margin-top: 40px; }
     </style>
 </head>
 <body>
 
     <div id="loading-screen">
-        <div style="font-size: 24px; margin-bottom: 10px;">Loading New Trad EVO...</div>
+        <div id="status-text" style="font-size: 20px; margin-bottom: 10px;">Looking for model.glb...</div>
         <div id="progress-bar" style="width: 200px; height: 10px; background: #eee; border-radius: 5px;">
-            <div id="progress-fill" style="width: 0%; height: 100%; background: #007bff; border-radius: 5px;"></div>
+            <div id="progress-fill" style="width: 5%; height: 100%; background: #007bff; border-radius: 5px; transition: width 0.3s;"></div>
         </div>
     </div>
 
@@ -75,12 +57,10 @@
         <div id="popup-ui">
             <span style="font-size: 0.8rem; color: #666;">Selected Component:</span><br>
             <strong id="selected-name" style="font-size: 1.2rem; display: block; margin: 5px 0 10px 0;">Object Name</strong>
-            
             <div id="length-input-box">
                 <label style="font-size: 0.9rem; font-weight: bold;">Enter Length (mm):</label><br>
                 <input type="number" id="input-length-val" value="1000" min="1">
             </div>
-
             <button class="btn-add" id="add-to-basket-btn">Add to Basket</button>
         </div>
     </div>
@@ -89,8 +69,7 @@
         <h2>Basket</h2>
         <div id="empty-msg">Your basket is empty.</div>
         <ul id="basket-list"></ul>
-        
-        <div id="basket-footer">
+        <div id="basket-footer" style="padding-top:20px; border-top:1px solid #eee;">
             <button class="btn-order" id="order-items-btn" disabled>Order Items (Create PDF)</button>
         </div>
     </div>
@@ -109,7 +88,6 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // --- SCENE SETUP ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xffffff); 
         const camera = new THREE.PerspectiveCamera(50, (window.innerWidth - 380) / window.innerHeight, 0.1, 1000);
@@ -126,14 +104,12 @@
         light.position.set(2, 5, 3);
         scene.add(light);
 
-        // --- STATE ---
         let currentModel = null;
         let highlightedPart = null;
         let originalMaterials = new Map();
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // --- NAME HELPERS ---
         function getRawName(object) {
             if (object.name && !object.name.toLowerCase().includes("mesh") && !object.name.toLowerCase().includes("object")) {
                 return object.name;
@@ -146,9 +122,12 @@
             return rawName.replace('_L', '').trim();
         }
 
-        // --- AUTOMATIC LOAD ---
+        // --- UPDATED LOADER SECTION ---
         const loader = new GLTFLoader();
-        loader.load('New%20trad%20EVO.glb', (gltf) => {
+        // Rename your file to 'model.glb' for best results!
+        const FILE_NAME = 'model.glb'; 
+
+        loader.load(FILE_NAME, (gltf) => {
             currentModel = gltf.scene;
             scene.add(currentModel);
             const box = new THREE.Box3().setFromObject(currentModel);
@@ -158,153 +137,24 @@
                 if (n.isMesh) originalMaterials.set(n.uuid, n.material.clone());
             });
             document.getElementById('loading-screen').style.display = 'none';
-        }, (xhr) => {
-            const percent = (xhr.loaded / xhr.total) * 100;
-            document.getElementById('progress-fill').style.width = percent + '%';
-        });
-
-        // --- INTERACTION ---
-        window.addEventListener('click', (event) => {
-            const rect = renderer.domElement.getBoundingClientRect();
-            if (event.clientX > rect.right) return;
-
-            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(scene.children, true);
-
-            if (highlightedPart) highlightedPart.material = originalMaterials.get(highlightedPart.uuid);
-
-            if (intersects.length > 0) {
-                highlightedPart = intersects[0].object;
-                highlightedPart.material = new THREE.MeshStandardMaterial({ color: 0x007bff, emissive: 0x001133 });
-                
-                const rawName = getRawName(highlightedPart);
-                document.getElementById('selected-name').innerText = getDisplayName(rawName);
-                
-                // Toggle Length Input visibility
-                document.getElementById('length-input-box').style.display = rawName.endsWith('_L') ? 'block' : 'none';
-                document.getElementById('popup-ui').style.display = 'block';
+        }, 
+        (xhr) => {
+            if (xhr.total > 0) {
+                const percent = (xhr.loaded / xhr.total) * 100;
+                document.getElementById('progress-fill').style.width = percent + '%';
             } else {
-                document.getElementById('popup-ui').style.display = 'none';
-                highlightedPart = null;
+                // If server doesn't provide size, just show movement
+                document.getElementById('status-text').innerText = "Downloading model...";
+                document.getElementById('progress-fill').style.width = '50%';
             }
+        }, 
+        (err) => {
+            console.error(err);
+            document.getElementById('status-text').innerHTML = 
+                `<span style="color:red">Error: ${FILE_NAME} not found.</span><br>
+                 <small>Make sure the file is named exactly <b>${FILE_NAME}</b> and is in the same folder as this HTML file.</small>`;
         });
 
-        // --- BASKET LOGIC ---
-        const basketList = document.getElementById('basket-list');
-        const emptyMsg = document.getElementById('empty-msg');
-        const orderBtn = document.getElementById('order-items-btn');
-
-        document.getElementById('add-to-basket-btn').addEventListener('click', () => {
-            if (!highlightedPart) return;
-            const rawName = getRawName(highlightedPart);
-            const length = rawName.endsWith('_L') ? document.getElementById('input-length-val').value : null;
-            addToBasket(rawName, length);
-        });
-
-        function addToBasket(rawName, length) {
-            emptyMsg.style.display = 'none';
-            orderBtn.disabled = false;
-            
-            const displayName = getDisplayName(rawName);
-            const itemId = length ? `${rawName}-${length}` : rawName;
-
-            let existing = document.querySelector(`[data-id="${itemId}"]`);
-            if (existing) {
-                changeQty(itemId, 1);
-                return;
-            }
-
-            const li = document.createElement('li');
-            li.className = 'basket-item';
-            li.setAttribute('data-id', itemId);
-            li.setAttribute('data-rawname', rawName);
-            li.setAttribute('data-length', length || "");
-
-            li.innerHTML = `
-                <div class="item-header">
-                    <span>${displayName}</span>
-                    <button class="remove-btn">&times;</button>
-                </div>
-                <div class="item-details">
-                    ${length ? `<span><strong>Length:</strong> ${length} mm</span>` : ''}
-                </div>
-                <div class="item-controls">
-                    <button class="qty-btn minus">-</button>
-                    <span class="qty-num">1</span>
-                    <button class="qty-btn plus">+</button>
-                </div>
-            `;
-            
-            li.querySelector('.plus').onclick = () => changeQty(itemId, 1);
-            li.querySelector('.minus').onclick = () => changeQty(itemId, -1);
-            li.querySelector('.remove-btn').onclick = () => { li.remove(); checkEmpty(); };
-            basketList.appendChild(li);
-        }
-
-        function changeQty(id, delta) {
-            const item = document.querySelector(`[data-id="${id}"]`);
-            const qtyLabel = item.querySelector('.qty-num');
-            let val = parseInt(qtyLabel.innerText) + delta;
-            if (val <= 0) item.remove(); else qtyLabel.innerText = val;
-            checkEmpty();
-        }
-
-        function checkEmpty() {
-            if (basketList.children.length === 0) { emptyMsg.style.display = 'block'; orderBtn.disabled = true; }
-        }
-
-        // --- PDF GENERATION ---
-        orderBtn.addEventListener('click', () => {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // 1. Highlight Ordered Parts Green
-            const orderedRawNames = Array.from(document.querySelectorAll('.basket-item')).map(el => el.getAttribute('data-rawname'));
-            const highlightMat = new THREE.MeshStandardMaterial({ color: 0x28a745, emissive: 0x113311 });
-            
-            currentModel.traverse(n => {
-                if (n.isMesh && orderedRawNames.includes(getRawName(n))) n.material = highlightMat;
-            });
-
-            renderer.render(scene, camera);
-            const imgData = renderer.domElement.toDataURL('image/png');
-
-            // 2. Reset Colors
-            currentModel.traverse(n => { if (n.isMesh) n.material = originalMaterials.get(n.uuid); });
-            if (highlightedPart) highlightedPart.material = new THREE.MeshStandardMaterial({ color: 0x007bff, emissive: 0x001133 });
-            renderer.render(scene, camera);
-
-            // 3. Build PDF
-            doc.setFontSize(20);
-            doc.text("Order Summary: New Trad EVO", 15, 20);
-            doc.addImage(imgData, 'PNG', 15, 30, 180, 100); 
-            
-            const tableRows = [];
-            document.querySelectorAll('.basket-item').forEach(item => {
-                const name = getDisplayName(item.getAttribute('data-rawname'));
-                const len = item.getAttribute('data-length') || "-";
-                const qty = item.querySelector('.qty-num').innerText;
-                tableRows.push([name, len, qty]);
-            });
-
-            doc.autoTable({
-                startY: 140,
-                head: [['Part Name', 'Length (mm)', 'Quantity']],
-                body: tableRows,
-                theme: 'striped',
-                headStyles: { fillColor: [40, 167, 69] }
-            });
-
-            doc.save('Order_Summary.pdf');
-        });
-
-        function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = (window.innerWidth - 380) / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth - 380, window.innerHeigh
+        // --- INTERACTION & BASKET ---
+        window.addEventListener('click', (event) => {
+            const rect
