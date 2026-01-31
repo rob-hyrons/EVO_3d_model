@@ -1,5 +1,3 @@
---- START OF FILE index.html ---
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,79 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Part Selector - New Trad EVO</title>
     
-    <!-- PDF Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         body { margin: 0; font-family: 'Segoe UI', sans-serif; overflow: hidden; display: flex; height: 100vh; background: #f4f4f4; }
-        
         #viewport { flex: 1; position: relative; cursor: crosshair; }
         #sidebar { 
             width: 350px; background: white; border-left: 1px solid #ddd; 
             display: flex; flex-direction: column; padding: 20px; 
             box-shadow: -5px 0 15px rgba(0,0,0,0.05); 
         }
-        
         #loading-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.9); display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 100;
+            background: rgba(255,255,255,0.95); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 1000;
         }
-
         #popup-ui { 
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             display: none; text-align: center; min-width: 250px; z-index: 10;
         }
-
         h2 { margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid #007bff; }
         #basket-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; }
-        
         .basket-item { 
             background: #fff; border: 1px solid #eee; border-radius: 8px;
-            padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px;
+            padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;
         }
         .item-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
-        .item-controls { display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; padding: 5px 10px; border-radius: 5px; }
+        .item-controls { display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 8px; border-radius: 5px; }
         
-        /* Length Input Styling */
-        .length-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 10px;
-            background: #e9ecef;
-            border-radius: 5px;
-            font-size: 0.9rem;
-        }
-        .length-input {
-            width: 80px;
-            padding: 4px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            text-align: right;
-        }
+        .mm-input-wrap { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: #555; }
+        .mm-input { width: 60px; padding: 4px; border: 1px solid #ccc; border-radius: 3px; }
 
         .btn-add { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        .qty-btn { width: 30px; height: 30px; border: 1px solid #ccc; background: white; cursor: pointer; border-radius: 4px; font-weight: bold; }
-        .qty-btn:hover { background: #007bff; color: white; border-color: #007bff; }
+        .qty-btn { width: 28px; height: 28px; border: 1px solid #ccc; background: white; cursor: pointer; border-radius: 4px; font-weight: bold; }
         .remove-btn { color: #dc3545; border: none; background: none; cursor: pointer; font-size: 1.2rem; }
-
-        #basket-footer { padding-top: 20px; border-top: 1px solid #eee; }
-        .btn-order { 
-            background: #007bff; color: white; border: none; padding: 15px; 
-            border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1rem;
-        }
+        .btn-order { background: #007bff; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1rem; }
         .btn-order:disabled { background: #ccc; cursor: not-allowed; }
-
         #empty-msg { color: #888; text-align: center; margin-top: 40px; }
     </style>
 </head>
 <body>
 
     <div id="loading-screen">
-        <div style="font-size: 24px; margin-bottom: 10px;">Loading Model...</div>
+        <div style="font-size: 24px; margin-bottom: 10px;">Loading 3D Model...</div>
         <div id="progress-bar" style="width: 200px; height: 10px; background: #eee; border-radius: 5px;">
             <div id="progress-fill" style="width: 0%; height: 100%; background: #007bff; border-radius: 5px;"></div>
         </div>
@@ -87,7 +57,7 @@
 
     <div id="viewport">
         <div id="popup-ui">
-            <span style="font-size: 0.8rem; color: #666;">Selected Part:</span><br>
+            <span style="font-size: 0.8rem; color: #666;">Selected Part:</span>
             <strong id="selected-name" style="font-size: 1.2rem; display: block; margin: 5px 0 10px 0;">Object Name</strong>
             <button class="btn-add" id="add-to-basket-btn">Add to Basket</button>
         </div>
@@ -97,7 +67,6 @@
         <h2>Basket</h2>
         <div id="empty-msg">Your basket is empty.</div>
         <ul id="basket-list"></ul>
-        
         <div id="basket-footer">
             <button class="btn-order" id="order-items-btn" disabled>Order Items (Create PDF)</button>
         </div>
@@ -117,7 +86,6 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // --- SCENE SETUP ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xffffff); 
         const camera = new THREE.PerspectiveCamera(50, (window.innerWidth - 350) / window.innerHeight, 0.1, 1000);
@@ -125,7 +93,7 @@
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
         renderer.setSize(window.innerWidth - 350, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.getElementById('viewport').appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
@@ -134,15 +102,14 @@
         light.position.set(2, 5, 3);
         scene.add(light);
 
-        // --- STATE ---
         let currentModel = null;
         let highlightedPart = null;
         let originalMaterials = new Map();
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // --- NAME FINDER ---
         function getBestName(object) {
+            if (!object) return "Unknown Part";
             if (object.name && !object.name.toLowerCase().includes("mesh") && !object.name.toLowerCase().includes("object")) {
                 return object.name;
             }
@@ -152,49 +119,33 @@
             return object.name || "Unknown Part";
         }
 
-        // --- AUTOMATIC LOAD ---
         const loader = new GLTFLoader();
         const modelUrl = 'New%20trad%20EVO.glb'; 
 
         loader.load(modelUrl, (gltf) => {
             currentModel = gltf.scene;
             scene.add(currentModel);
+            
             const box = new THREE.Box3().setFromObject(currentModel);
             const center = box.getCenter(new THREE.Vector3());
             currentModel.position.sub(center);
+
             currentModel.traverse(n => {
-                if (n.isMesh) originalMaterials.set(n.uuid, n.material.clone());
+                if (n.isMesh) {
+                    originalMaterials.set(n.uuid, n.material.clone());
+                }
             });
+
+            // IMPORTANT: Hide loading screen AFTER everything is processed
             document.getElementById('loading-screen').style.display = 'none';
         }, (xhr) => {
-            const percent = (xhr.loaded / xhr.total) * 100;
-            document.getElementById('progress-fill').style.width = percent + '%';
-        }, (error) => {
-            document.getElementById('loading-screen').innerHTML = "Error: 'New trad EVO.glb' not found.";
-        });
-
-        // --- INTERACTION ---
-        window.addEventListener('click', (event) => {
-            const rect = renderer.domElement.getBoundingClientRect();
-            if (event.clientX > rect.right) return;
-
-            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(scene.children, true);
-
-            if (highlightedPart) highlightedPart.material = originalMaterials.get(highlightedPart.uuid);
-
-            if (intersects.length > 0) {
-                highlightedPart = intersects[0].object;
-                highlightedPart.material = new THREE.MeshStandardMaterial({ color: 0x007bff, emissive: 0x001133 });
-                document.getElementById('selected-name').innerText = getBestName(highlightedPart);
-                document.getElementById('popup-ui').style.display = 'block';
-            } else {
-                document.getElementById('popup-ui').style.display = 'none';
-                highlightedPart = null;
+            if (xhr.lengthComputable) {
+                const percent = (xhr.loaded / xhr.total) * 100;
+                document.getElementById('progress-fill').style.width = percent + '%';
             }
+        }, (error) => {
+            console.error(error);
+            document.getElementById('loading-screen').innerHTML = "Error loading model. Check file name.";
         });
 
         // --- BASKET LOGIC ---
@@ -204,5 +155,161 @@
 
         document.getElementById('add-to-basket-btn').addEventListener('click', () => {
             if (!highlightedPart) return;
-            addToBasket(getBestName(highlightedPart));
-        })
+            const name = getBestName(highlightedPart);
+            addToBasket(name);
+        });
+
+        function addToBasket(name) {
+            emptyMsg.style.display = 'none';
+            orderBtn.disabled = false;
+
+            // Safe search for existing items (avoids CSS selector crashes)
+            let items = basketList.getElementsByClassName('basket-item');
+            let existing = Array.from(items).find(item => item.getAttribute('data-id') === name);
+
+            if (existing) {
+                updateQty(existing, 1);
+                return;
+            }
+
+            const li = document.createElement('li');
+            li.className = 'basket-item';
+            li.setAttribute('data-id', name);
+            
+            // Check if name ends with _L
+            const hasLength = name.trim().endsWith('_L');
+
+            li.innerHTML = `
+                <div class="item-header">
+                    <span>${name}</span>
+                    <button class="remove-btn">&times;</button>
+                </div>
+                <div class="item-controls">
+                    <button class="qty-btn minus">-</button>
+                    <span class="qty-num">1</span>
+                    <button class="qty-btn plus">+</button>
+                    ${hasLength ? `
+                        <div class="mm-input-wrap">
+                            <input type="number" class="mm-input" placeholder="Length" min="0">
+                            <span>mm</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            li.querySelector('.plus').onclick = () => updateQty(li, 1);
+            li.querySelector('.minus').onclick = () => updateQty(li, -1);
+            li.querySelector('.remove-btn').onclick = () => { li.remove(); checkEmpty(); };
+            
+            basketList.appendChild(li);
+        }
+
+        function updateQty(itemEl, delta) {
+            const qtyLabel = itemEl.querySelector('.qty-num');
+            let val = parseInt(qtyLabel.innerText) + delta;
+            if (val <= 0) {
+                itemEl.remove();
+            } else {
+                qtyLabel.innerText = val;
+            }
+            checkEmpty();
+        }
+
+        function checkEmpty() {
+            if (basketList.children.length === 0) {
+                emptyMsg.style.display = 'block';
+                orderBtn.disabled = true;
+            }
+        }
+
+        // --- INTERACTION ---
+        window.addEventListener('click', (event) => {
+            const rect = renderer.domElement.getBoundingClientRect();
+            if (event.clientX > rect.right || event.clientX < rect.left) return;
+
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            if (highlightedPart) {
+                highlightedPart.material = originalMaterials.get(highlightedPart.uuid);
+            }
+
+            if (intersects.length > 0) {
+                highlightedPart = intersects[0].object;
+                highlightedPart.material = new THREE.MeshStandardMaterial({ 
+                    color: 0x007bff, 
+                    emissive: 0x001133 
+                });
+                document.getElementById('selected-name').innerText = getBestName(highlightedPart);
+                document.getElementById('popup-ui').style.display = 'block';
+            } else {
+                document.getElementById('popup-ui').style.display = 'none';
+                highlightedPart = null;
+            }
+        });
+
+        // --- PDF GENERATION ---
+        orderBtn.addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const items = Array.from(document.querySelectorAll('.basket-item'));
+            const itemNames = items.map(el => el.getAttribute('data-id'));
+
+            // Highlighting logic for screenshot
+            const orderMat = new THREE.MeshStandardMaterial({ color: 0x28a745, emissive: 0x113311 });
+            currentModel.traverse(n => {
+                if (n.isMesh && itemNames.includes(getBestName(n))) {
+                    n.material = orderMat;
+                }
+            });
+
+            renderer.render(scene, camera);
+            const imgData = renderer.domElement.toDataURL('image/png');
+
+            // Reset materials
+            currentModel.traverse(n => {
+                if (n.isMesh) n.material = originalMaterials.get(n.uuid);
+            });
+            renderer.render(scene, camera);
+
+            doc.setFontSize(20);
+            doc.text("Order Summary: New Trad EVO", 20, 20);
+            doc.addImage(imgData, 'PNG', 20, 30, 170, 90); 
+            
+            const tableRows = items.map(item => {
+                const name = item.getAttribute('data-id');
+                const qty = item.querySelector('.qty-num').innerText;
+                const mmInput = item.querySelector('.mm-input');
+                const mmVal = mmInput ? mmInput.value + " mm" : "-";
+                return [name, qty, mmVal];
+            });
+
+            doc.autoTable({
+                startY: 130,
+                head: [['Part Name', 'Quantity', 'Length (mm)']],
+                body: tableRows,
+                headStyles: { fillColor: [40, 167, 69] }
+            });
+
+            doc.save('Order_Summary.pdf');
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = (window.innerWidth - 350) / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth - 350, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
