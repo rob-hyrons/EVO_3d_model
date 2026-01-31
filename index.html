@@ -122,13 +122,11 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // --- HELPER: GET PART NAME ---
+        // --- NAME FINDER ---
         function getBestName(object) {
-            // Check current object name, avoid default mesh strings
             if (object.name && !object.name.toLowerCase().includes("mesh") && !object.name.toLowerCase().includes("object")) {
                 return object.name;
             }
-            // If unnamed, check parent name
             if (object.parent && object.parent.type !== 'Scene') {
                 return getBestName(object.parent);
             }
@@ -137,37 +135,24 @@
 
         // --- AUTOMATIC LOAD ---
         const loader = new GLTFLoader();
-        // Encoded to handle spaces in GitHub URLs
         const modelUrl = 'New%20trad%20EVO.glb'; 
 
-        loader.load(
-            modelUrl,
-            (gltf) => {
-                currentModel = gltf.scene;
-                scene.add(currentModel);
-
-                // Center the model
-                const box = new THREE.Box3().setFromObject(currentModel);
-                const center = box.getCenter(new THREE.Vector3());
-                currentModel.position.sub(center);
-
-                // Store original materials for highlighting reset
-                currentModel.traverse(n => {
-                    if (n.isMesh) originalMaterials.set(n.uuid, n.material.clone());
-                });
-
-                // Hide loading screen
-                document.getElementById('loading-screen').style.display = 'none';
-            },
-            (xhr) => {
-                const percent = (xhr.loaded / xhr.total) * 100;
-                document.getElementById('progress-fill').style.width = percent + '%';
-            },
-            (error) => {
-                console.error('Error loading model:', error);
-                document.getElementById('loading-screen').innerHTML = "Error: File 'New trad EVO.glb' not found.<br>Ensure it is in the same folder.";
-            }
-        );
+        loader.load(modelUrl, (gltf) => {
+            currentModel = gltf.scene;
+            scene.add(currentModel);
+            const box = new THREE.Box3().setFromObject(currentModel);
+            const center = box.getCenter(new THREE.Vector3());
+            currentModel.position.sub(center);
+            currentModel.traverse(n => {
+                if (n.isMesh) originalMaterials.set(n.uuid, n.material.clone());
+            });
+            document.getElementById('loading-screen').style.display = 'none';
+        }, (xhr) => {
+            const percent = (xhr.loaded / xhr.total) * 100;
+            document.getElementById('progress-fill').style.width = percent + '%';
+        }, (error) => {
+            document.getElementById('loading-screen').innerHTML = "Error: 'New trad EVO.glb' not found.";
+        });
 
         // --- INTERACTION ---
         window.addEventListener('click', (event) => {
@@ -184,11 +169,7 @@
 
             if (intersects.length > 0) {
                 highlightedPart = intersects[0].object;
-                highlightedPart.material = new THREE.MeshStandardMaterial({ 
-                    color: 0x007bff, 
-                    emissive: 0x001133,
-                    roughness: 0.3
-                });
+                highlightedPart.material = new THREE.MeshStandardMaterial({ color: 0x007bff, emissive: 0x001133 });
                 document.getElementById('selected-name').innerText = getBestName(highlightedPart);
                 document.getElementById('popup-ui').style.display = 'block';
             } else {
@@ -204,37 +185,25 @@
 
         document.getElementById('add-to-basket-btn').addEventListener('click', () => {
             if (!highlightedPart) return;
-            const name = getBestName(highlightedPart);
-            addToBasket(name);
+            addToBasket(getBestName(highlightedPart));
         });
 
         function addToBasket(name) {
             emptyMsg.style.display = 'none';
             orderBtn.disabled = false;
-            
             let existing = document.querySelector(`[data-id="${name}"]`);
-            if (existing) {
-                changeQty(name, 1);
-                return;
-            }
+            if (existing) { changeQty(name, 1); return; }
 
             const li = document.createElement('li');
             li.className = 'basket-item';
             li.setAttribute('data-id', name);
             li.innerHTML = `
                 <div class="item-header"><span>${name}</span><button class="remove-btn">&times;</button></div>
-                <div class="item-controls">
-                    <button class="qty-btn minus">-</button>
-                    <span class="qty-num">1</span>
-                    <button class="qty-btn plus">+</button>
-                </div>
+                <div class="item-controls"><button class="qty-btn minus">-</button><span class="qty-num">1</span><button class="qty-btn plus">+</button></div>
             `;
             li.querySelector('.plus').onclick = () => changeQty(name, 1);
             li.querySelector('.minus').onclick = () => changeQty(name, -1);
-            li.querySelector('.remove-btn').onclick = () => {
-                li.remove();
-                checkEmpty();
-            };
+            li.querySelector('.remove-btn').onclick = () => { li.remove(); checkEmpty(); };
             basketList.appendChild(li);
         }
 
@@ -242,28 +211,55 @@
             const item = document.querySelector(`[data-id="${name}"]`);
             const qtyLabel = item.querySelector('.qty-num');
             let val = parseInt(qtyLabel.innerText) + delta;
-            if (val <= 0) item.remove();
-            else qtyLabel.innerText = val;
+            if (val <= 0) item.remove(); else qtyLabel.innerText = val;
             checkEmpty();
         }
 
         function checkEmpty() {
-            if (basketList.children.length === 0) {
-                emptyMsg.style.display = 'block';
-                orderBtn.disabled = true;
-            }
+            if (basketList.children.length === 0) { emptyMsg.style.display = 'block'; orderBtn.disabled = true; }
         }
 
-        // --- PDF GENERATION ---
+        // --- PDF GENERATION WITH HIGHLIGHTING ---
         orderBtn.addEventListener('click', () => {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            doc.setFontSize(22);
-            doc.text("Order Summary: New Trad EVO", 20, 20);
+            // 1. Get List of items in basket
+            const basketItemNames = Array.from(document.querySelectorAll('.basket-item')).map(el => el.getAttribute('data-id'));
+
+            // 2. TEMPORARY HIGHLIGHT: Turn everything in basket Green
+            const orderHighlightMaterial = new THREE.MeshStandardMaterial({ color: 0x28a745, emissive: 0x113311 });
             
+            currentModel.traverse(n => {
+                if (n.isMesh) {
+                    const partName = getBestName(n);
+                    if (basketItemNames.includes(partName)) {
+                        n.material = orderHighlightMaterial;
+                    }
+                }
+            });
+
+            // 3. Render and Capture
+            renderer.render(scene, camera);
             const imgData = renderer.domElement.toDataURL('image/png');
-            doc.addImage(imgData, 'PNG', 20, 30, 170, 100); 
+
+            // 4. RESET MATERIALS back to normal
+            currentModel.traverse(n => {
+                if (n.isMesh) {
+                    n.material = originalMaterials.get(n.uuid);
+                }
+            });
+            // If something was selected (blue), keep it selected on screen
+            if (highlightedPart) highlightedPart.material = new THREE.MeshStandardMaterial({ color: 0x007bff, emissive: 0x001133 });
+            renderer.render(scene, camera);
+
+            // 5. Construct PDF
+            doc.setFontSize(20);
+            doc.text("Order Summary: New Trad EVO", 20, 20);
+            doc.setFontSize(10);
+            doc.text("Green highlighted parts are included in this order.", 20, 28);
+            
+            doc.addImage(imgData, 'PNG', 20, 35, 170, 100); 
             
             const tableRows = [];
             document.querySelectorAll('.basket-item').forEach(item => {
@@ -271,13 +267,14 @@
             });
 
             doc.autoTable({
-                startY: 140,
+                startY: 145,
                 head: [['Part Name', 'Quantity']],
                 body: tableRows,
-                theme: 'striped'
+                theme: 'striped',
+                headStyles: { fillColor: [40, 167, 69] } // Match the green highlight
             });
 
-            doc.save('Order_Summary.pdf');
+            doc.save('New_Trad_EVO_Order.pdf');
         });
 
         function animate() {
